@@ -414,7 +414,7 @@
 </div>
 
 <script>
-const APP_VERSION='1.0.2';
+const APP_VERSION='1.0.3';
 /* ---------- אחסון ---------- */
 const KEY='my-health-v1';
 let db={};
@@ -599,8 +599,12 @@ function renderToday(){
     ${woTxt||cTxt?`<div style="font-size:14px;line-height:1.7;margin-bottom:10px">${woTxt}${woTxt&&cTxt?'<br>':''}${cTxt}</div>`:`<div class="muted small" style="margin-bottom:10px">עוד לא נרשם אימון ליום זה.</div>`}
     <div class="btns"><button class="add" onclick="openCardio()">＋ אירובי</button><button class="add pri" onclick="go('train')">${db.active?'▶ המשך אימון פעיל':'🏋️ התחל אימון כוח'}</button></div></div>`;
   // week strip
-  const ws0=weekStart(selDay),ws6=shiftDay(ws0,6),isCurWeek=ws0===weekStart(todayKey());
-  h+=`<div class="stitle"><h2>${isCurWeek?'השבוע':'שבוע'} · ${shortDay(ws0)}–${shortDay(ws6)}</h2></div><div class="week">`;
+  const ws0=shiftDay(weekStart(todayKey()),-7),ws6=shiftDay(ws0,6);
+  const wk7=Array.from({length:7},(_,i)=>shiftDay(ws0,i));
+  const wkWo=db.workouts.filter(w=>w.date>=ws0&&w.date<=ws6).length;
+  const wkK=wk7.map(k=>dayTotals(k)).filter(t=>t.n);const wkAvg=wkK.length?r0(wkK.reduce((a,t)=>a+t.kcal,0)/wkK.length):0;
+  const wkW=avgWeight(ws6,7);
+  h+=`<div class="stitle"><h2>שבוע קודם · ${shortDay(ws0)}–${shortDay(ws6)}</h2><span class="small muted">${wkWo} אימוני כוח${wkAvg?' · ממוצע '+fmt(wkAvg)+' קק"ל':''}${wkW?' · משקל '+r1(wkW):''}</span></div><div class="week">`;
   for(let i=0;i<7;i++){const k=shiftDay(ws0,i);const fut=k>todayKey();const t=dayTotals(k);const has=db.workouts.some(w=>w.date===k);const cd=db.cardio.some(c=>c.date===k);
     const cls=t.n?(t.kcal<=T.kcal*1.05?'ok':'over'):'dim';
     h+=`<div class="wd ${k===selDay?'sel':''} ${fut?'fut':''}" ${fut?'':`onclick="setSel('${k}')"`}><div class="d">${wdShort(k)}</div><div class="ic">${has?'🏋️':(cd?'🚶':'')}</div><div class="n ${cls}">${t.n?r0(t.kcal):'·'}</div></div>`;}
