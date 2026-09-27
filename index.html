@@ -147,6 +147,7 @@
   .week{display:flex;justify-content:space-between;gap:6px;margin-bottom:12px}
   .wd{flex:1;background:var(--card);border-radius:12px;padding:8px 2px;text-align:center;box-shadow:var(--shadow);cursor:pointer}
   .wd.sel{outline:2px solid var(--acc)}
+  .wd.fut{opacity:.4;cursor:default}
   .wd .d{font-size:11px;color:var(--ink-soft);font-weight:700}
   .wd .ic{font-size:14px;margin-top:3px;height:18px}
   .wd .n{font-size:10.5px;font-weight:700;margin-top:2px}
@@ -187,9 +188,6 @@
   .chip{border:1px solid var(--line);background:var(--card);border-radius:20px;padding:6px 12px;font-size:12.5px;font-weight:700;color:var(--ink-soft);cursor:pointer;font-family:inherit}
   .chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
   .picklist{max-height:44vh;overflow-y:auto;border-radius:14px}
-  .stars{display:flex;gap:6px}
-  .stars button{flex:1;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 0;font-size:16px;cursor:pointer}
-  .stars button.on{background:var(--sleep-bg);border-color:var(--sleep)}
   .inline-num{display:flex;align-items:center;gap:8px}
   .inline-num button{width:40px;height:40px;border:none;background:var(--line-soft);border-radius:11px;font-size:20px;cursor:pointer;font-family:inherit;color:var(--ink)}
   .inline-num b{flex:1;text-align:center;font-size:20px;font-family:'Frank Ruhl Libre',serif}
@@ -260,7 +258,6 @@
     <div class="field"><label>שעות שינה</label><input id="d-sleep" type="number" step="0.25" inputmode="decimal" placeholder="7.5"></div>
     <div class="field"><label>צעדים</label><input id="d-steps" type="number" inputmode="numeric" placeholder="8000"></div>
   </div>
-  <div class="field"><label>איכות שינה</label><div class="stars" id="d-sleepq"></div></div>
   <div class="field"><label>מים (כוסות של 250 מ"ל)</label>
     <div class="inline-num"><button onclick="bumpWater(-1)">−</button><b id="d-water-v">0</b><button onclick="bumpWater(1)">+</button></div></div>
   <div class="field"><label>הערה</label><input id="d-note" placeholder="איך הרגשת, אנרגיה, כאבים…"></div>
@@ -417,7 +414,7 @@
 </div>
 
 <script>
-const APP_VERSION='1.0.1';
+const APP_VERSION='1.0.2';
 /* ---------- אחסון ---------- */
 const KEY='my-health-v1';
 let db={};
@@ -557,11 +554,12 @@ function renderNav(){document.getElementById('nav').innerHTML=NAV.map(([k,ic,lb]
 function go(v){cur=v;document.querySelectorAll('.view').forEach(s=>s.classList.remove('on'));document.getElementById('v-'+v).classList.add('on');document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));render();window.scrollTo(0,0);}
 function render(){({today:renderToday,food:renderFood,train:renderTrain,stats:renderStats,settings:renderSettings})[cur]();}
 function dayNav(){
+  /* RTL: הכפתור הראשון מוצג בימין. חץ ימינה (›) = יום הבא, חץ שמאלה (‹) = יום קודם */
   const isToday=selDay===todayKey();
-  return `<div class="dnav"><button onclick="setSel('${shiftDay(selDay,-1)}')">›</button>
+  return `<div class="dnav"><button onclick="setSel('${shiftDay(selDay,1)}')" ${isToday?'disabled':''} title="יום הבא">›</button>
     <div class="mid" onclick="setSel('${todayKey()}')"><b>${isToday?'היום':dayLabel(selDay)}</b><small>${isToday?dayLabel(selDay):''}</small></div>
     ${isToday?'':`<button class="today" onclick="setSel('${todayKey()}')">היום</button>`}
-    <button onclick="setSel('${shiftDay(selDay,1)}')" ${isToday?'disabled':''}>‹</button></div>`;
+    <button onclick="setSel('${shiftDay(selDay,-1)}')" title="יום קודם">‹</button></div>`;
 }
 function setSel(k){selDay=k;render();}
 
@@ -590,7 +588,7 @@ function renderToday(){
   const wv=d.weight?`${d.weight}<small> ק"ג</small>`:'—';
   h+=`<div class="tiles">
     <div class="tile" onclick="openDay()"><span class="ico">⚖️</span><div class="k">משקל</div><div class="v ${d.weight?'':'dim'}">${wv}</div><div class="sub">${avg7?'ממוצע 7 ימים: '+r1(avg7):'עוד לא נשקלת'}</div></div>
-    <div class="tile sleep" onclick="openDay()"><span class="ico">😴</span><div class="k">שינה</div><div class="v ${d.sleepH?'':'dim'}">${d.sleepH?d.sleepH+'<small> שעות</small>':'—'}</div><div class="sub">${d.sleepQ?'איכות '+'★'.repeat(d.sleepQ):'יעד '+T.sleep+' שעות'}</div></div>
+    <div class="tile sleep" onclick="openDay()"><span class="ico">😴</span><div class="k">שינה</div><div class="v ${d.sleepH?'':'dim'}">${d.sleepH?d.sleepH+'<small> שעות</small>':'—'}</div><div class="sub">יעד ${T.sleep} שעות</div></div>
     <div class="tile" onclick="openDay()"><span class="ico">👣</span><div class="k">צעדים</div><div class="v ${d.steps?(d.steps>=T.steps?'pos':''):'dim'}">${d.steps?fmt(d.steps):'—'}</div><div class="sub">יעד ${fmt(T.steps)}</div></div>
     <div class="tile" onclick="openDay()"><span class="ico">💧</span><div class="k">מים</div><div class="v ${d.water?(d.water>=T.water?'pos':''):'dim'}">${d.water||0}<small> / ${T.water} כוסות</small></div><div class="sub">${((d.water||0)*0.25).toFixed(2)} ליטר</div></div>
   </div>`;
@@ -601,10 +599,11 @@ function renderToday(){
     ${woTxt||cTxt?`<div style="font-size:14px;line-height:1.7;margin-bottom:10px">${woTxt}${woTxt&&cTxt?'<br>':''}${cTxt}</div>`:`<div class="muted small" style="margin-bottom:10px">עוד לא נרשם אימון ליום זה.</div>`}
     <div class="btns"><button class="add" onclick="openCardio()">＋ אירובי</button><button class="add pri" onclick="go('train')">${db.active?'▶ המשך אימון פעיל':'🏋️ התחל אימון כוח'}</button></div></div>`;
   // week strip
-  h+=`<div class="stitle"><h2>7 ימים אחרונים</h2></div><div class="week">`;
-  for(let i=6;i>=0;i--){const k=shiftDay(todayKey(),-i);const t=dayTotals(k);const has=db.workouts.some(w=>w.date===k);const cd=db.cardio.some(c=>c.date===k);
+  const ws0=weekStart(selDay),ws6=shiftDay(ws0,6),isCurWeek=ws0===weekStart(todayKey());
+  h+=`<div class="stitle"><h2>${isCurWeek?'השבוע':'שבוע'} · ${shortDay(ws0)}–${shortDay(ws6)}</h2></div><div class="week">`;
+  for(let i=0;i<7;i++){const k=shiftDay(ws0,i);const fut=k>todayKey();const t=dayTotals(k);const has=db.workouts.some(w=>w.date===k);const cd=db.cardio.some(c=>c.date===k);
     const cls=t.n?(t.kcal<=T.kcal*1.05?'ok':'over'):'dim';
-    h+=`<div class="wd ${k===selDay?'sel':''}" onclick="setSel('${k}')"><div class="d">${wdShort(k)}</div><div class="ic">${has?'🏋️':(cd?'🚶':'')}</div><div class="n ${cls}">${t.n?r0(t.kcal):'·'}</div></div>`;}
+    h+=`<div class="wd ${k===selDay?'sel':''} ${fut?'fut':''}" ${fut?'':`onclick="setSel('${k}')"`}><div class="d">${wdShort(k)}</div><div class="ic">${has?'🏋️':(cd?'🚶':'')}</div><div class="n ${cls}">${t.n?r0(t.kcal):'·'}</div></div>`;}
   h+=`</div>`;
   // alerts / tips
   if(selDay===todayKey()){
@@ -622,22 +621,20 @@ function toggleFast(){
 setInterval(()=>{if(cur==='today'&&db.fast&&db.fast.start)renderToday();},60000);
 
 /* --- מדדי יום --- */
-let sleepQ=0;
 function openDay(){
   const d=day(selDay);
   document.getElementById('day-title').textContent='מדדים · '+dayLabel(selDay);
   document.getElementById('d-weight').value=d.weight||'';document.getElementById('d-waist').value=d.waist||'';
   document.getElementById('d-sleep').value=d.sleepH||'';document.getElementById('d-steps').value=d.steps||'';
   document.getElementById('d-note').value=d.note||'';document.getElementById('d-water-v').textContent=d.water||0;
-  sleepQ=d.sleepQ||0;renderStars();openSheet('sheet-day');
+  openSheet('sheet-day');
 }
-function renderStars(){document.getElementById('d-sleepq').innerHTML=[1,2,3,4,5].map(i=>`<button class="${i<=sleepQ?'on':''}" onclick="sleepQ=${i};renderStars()">${i<=sleepQ?'★':'☆'}</button>`).join('');}
 function bumpWater(n){const el=document.getElementById('d-water-v');el.textContent=Math.max(0,(+el.textContent||0)+n);}
 function saveDay(){
   const v=id=>{const x=parseFloat(document.getElementById(id).value);return isNaN(x)?null:x;};
-  const p={weight:v('d-weight'),waist:v('d-waist'),sleepH:v('d-sleep'),steps:v('d-steps'),sleepQ:sleepQ||null,water:+document.getElementById('d-water-v').textContent||0,note:document.getElementById('d-note').value.trim()};
+  const p={weight:v('d-weight'),waist:v('d-waist'),sleepH:v('d-sleep'),steps:v('d-steps'),water:+document.getElementById('d-water-v').textContent||0,note:document.getElementById('d-note').value.trim()};
   Object.keys(p).forEach(k=>{if(p[k]===null||p[k]==='')delete p[k];});
-  const cur=db.days[selDay]||{};['weight','waist','sleepH','steps','sleepQ','note'].forEach(k=>{if(!(k in p))delete cur[k];});
+  const cur=db.days[selDay]||{};['weight','waist','sleepH','steps','note'].forEach(k=>{if(!(k in p))delete cur[k];});delete cur.sleepQ;
   db.days[selDay]=Object.assign(cur,p);
   save();closeSheet();render();
 }
@@ -743,8 +740,7 @@ function renderTrain(){
   if(db.active){h+=renderActive();}
   else{
     h+=`<div class="stitle"><h2>התחלת אימון</h2><button class="add" onclick="openTpl()">＋ תבנית</button></div>`;
-    h+=`<div class="list">${db.templates.map(t=>`<div class="item"><div class="dot acc">🏋️</div><div class="mid" onclick="startWorkout('${t.id}')"><div class="t">${esc(t.name)}</div><div class="s">${t.exercises.map(id=>exInfo(id).name).join(' · ')}</div></div><button class="del" style="font-size:14px;color:var(--ink-soft)" onclick="openTpl('${t.id}')">✎</button></div>`).join('')}
-      <div class="item" onclick="startWorkout(null)"><div class="dot">✨</div><div class="mid"><div class="t">אימון חופשי</div><div class="s">מתחילים ריק ומוסיפים תרגילים תוך כדי</div></div></div></div>`;
+    h+=`<div class="list"><div class="item" onclick="startWorkout(null)"><div class="dot">✨</div><div class="mid"><div class="t">אימון חופשי</div><div class="s">מתחילים ריק ומוסיפים תרגילים תוך כדי</div></div></div>${db.templates.map(t=>`<div class="item"><div class="dot acc">🏋️</div><div class="mid" onclick="startWorkout('${t.id}')"><div class="t">${esc(t.name)}</div><div class="s">${t.exercises.map(id=>exInfo(id).name).join(' · ')}</div></div><button class="del" style="font-size:14px;color:var(--ink-soft)" onclick="openTpl('${t.id}')">✎</button></div>`).join('')}</div>`;
     h+=`<div class="btns" style="margin-bottom:8px"><button class="add" onclick="openCardio()">＋ רישום אירובי</button><button class="add" onclick="openExPick('browse')">📚 ארסנל התרגילים</button></div>`;
   }
   // history

@@ -24,7 +24,7 @@
 |---|---|
 | `profile` | `{sex, age, height, startWeight, startDate, goalWeight, goalDate, activity}` |
 | `targets` | `{kcal, protein, fat, carbs, steps, sleep, water, fastHours, workouts}` |
-| `days` | `'YYYY-MM-DD' → {weight, waist, sleepH, sleepQ, steps, water, fastH, note}` |
+| `days` | `'YYYY-MM-DD' → {weight, waist, sleepH, steps, water, fastH, note}` |
 | `foods` | מאכלים אישיים `{id, name, cat, per (100 או 1), kcal, p, f, c}` |
 | `foodLog` | `{id, date, meal (m1/m2/m3/snack), foodId, name, per, grams, kcal, p, f, c}` — הערכים כבר מחושבים לכמות |
 | `exercises` | תרגילים אישיים `{id, name, muscle}` |

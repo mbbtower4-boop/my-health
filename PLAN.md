@@ -162,7 +162,7 @@
 |---|---|
 | `profile` | `{sex, age, height, startWeight, startDate, goalWeight, goalDate, activity}` |
 | `targets` | `{kcal, protein, fat, carbs, steps, sleep, water, fastHours}` |
-| `days` | `'YYYY-MM-DD' → {weight, waist, sleepH, sleepQ, steps, water, fastH, note}` |
+| `days` | `'YYYY-MM-DD' → {weight, waist, sleepH, steps, water, fastH, note}` |
 | `foods` | מאגר מאכלים: `{id, name, kcal, p, f, c, custom}` (ל-100 ג') |
 | `foodLog` | `{id, date, meal, name, grams, kcal, p, f, c}` |
 | `exercises` | `{id, name, muscle, custom}` |
