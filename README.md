@@ -4,10 +4,12 @@
 
 | | |
 |---|---|
+| **אתר חי** | https://mbbtower4-boop.github.io/my-health/ |
+| **מאגר** | https://github.com/mbbtower4-boop/my-health |
 | **מיקום מקומי** | `D:\Work\AI\my-health` |
 | **קובץ יחיד** | `index.html` — כל ה-HTML/CSS/JS בפנים |
 | **תוכנית ומעקב** | `PLAN.md` — נתוני בסיס, חישוב קלוריות, תפריט, תוכנית אימונים, יומן פרויקט |
-| **הרצה** | פתיחת `index.html` בדפדפן (או GitHub Pages אחרי push) |
+| **הרצה** | פתיחת `index.html` בדפדפן או באתר החי; כל push ל-master מתפרסם ב-GitHub Pages תוך דקה-שתיים |
 
 ## ארכיטקטורה
 
