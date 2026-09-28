@@ -187,7 +187,14 @@
   .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
   .chip{border:1px solid var(--line);background:var(--card);border-radius:20px;padding:6px 12px;font-size:12.5px;font-weight:700;color:var(--ink-soft);cursor:pointer;font-family:inherit}
   .chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
-  .picklist{max-height:44vh;overflow-y:auto;border-radius:14px}
+  .picklist{max-height:48vh;overflow-y:auto;border-radius:14px}
+  #f-chips{align-items:center}
+  .fcats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+  .fcats button{border:1px solid var(--line);background:var(--card);border-radius:14px;padding:12px 6px 10px;font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;box-shadow:var(--shadow);color:var(--ink)}
+  .fcats button:active{background:var(--line-soft)}
+  .fcats .e{font-size:24px;line-height:1.1}
+  .fcats .l{font-size:12.5px;font-weight:700;line-height:1.25;text-align:center}
+  .fcats .n{font-size:11px;color:var(--ink-soft);font-weight:600}
   .inline-num{display:flex;align-items:center;gap:8px}
   .inline-num button{width:40px;height:40px;border:none;background:var(--line-soft);border-radius:11px;font-size:20px;cursor:pointer;font-family:inherit;color:var(--ink)}
   .inline-num b{flex:1;text-align:center;font-size:20px;font-family:'Frank Ruhl Libre',serif}
@@ -288,6 +295,7 @@
 <div class="sheet" id="sheet-cfood"><div class="grip"></div>
   <h3 id="cf-title">מאכל חדש</h3>
   <div class="field"><label>שם</label><input id="cf-name" placeholder="לדוגמה: סלט טונה של אמא"></div>
+  <div class="field"><label>קטגוריה</label><select id="cf-cat"></select></div>
   <div class="field"><label>הערכים הם ל-</label><div class="seg" id="cf-per"><button class="on" data-v="100" onclick="segPick(this)">100 גרם</button><button data-v="1" onclick="segPick(this)">מנה אחת</button></div></div>
   <div class="grid2">
     <div class="field"><label>קלוריות</label><input id="cf-kcal" type="number" inputmode="decimal"></div>
@@ -414,7 +422,7 @@
 </div>
 
 <script>
-const APP_VERSION='1.0.4';
+const APP_VERSION='1.0.5';
 /* ---------- אחסון ---------- */
 const KEY='my-health-v1';
 let db={};
@@ -441,25 +449,67 @@ let selDay=todayKey();
 /* ---------- מאגר מאכלים התחלתי (ל-100 גרם) ---------- */
 const MEALS=[['m1','ארוחה 1'],['m2','ארוחה 2'],['m3','ארוחה 3'],['snack','ביניים']];
 const mealLabel=m=>(MEALS.find(x=>x[0]===m)||['','אחר'])[1];
-const FOOD_CATS={protein:'חלבון',dairy:'חלב וביצים',carb:'פחמימות',fat:'שומנים',veg:'ירקות ופירות',other:'אחר'};
+/* קטגוריות מאגר המזון (סדר התצוגה). emo = אייקון, dot = צבע רקע */
+const FOOD_CATS={
+  fruit:{l:'פירות',emo:'🍎',dot:'pro'}, veg:{l:'ירקות',emo:'🥦',dot:'acc'},
+  meat:{l:'בשר ועוף',emo:'🥩',dot:'pro'}, fish:{l:'דגים ופירות ים',emo:'🐟',dot:'carb'},
+  dairy:{l:'חלב וביצים',emo:'🥚',dot:'fat'}, legume:{l:'קטניות וסויה',emo:'🫘',dot:'fat'},
+  grain:{l:'לחם, דגנים ועמילנים',emo:'🍞',dot:'carb'}, nuts:{l:'אגוזים, זרעים ושמנים',emo:'🥜',dot:'fat'},
+  other:{l:'מתוקים, משקאות ותוספים',emo:'🍫',dot:''}
+};
+const catOf=c=>FOOD_CATS[c]||FOOD_CATS.other;
+/* ערכים ל-100 גרם: [שם, קטגוריה, קלוריות, חלבון, שומן, פחמימה].
+   חשוב: המזהה הוא האינדקס (s0, s1…) — לא למחוק ולא לשנות סדר, רק להוסיף בסוף. */
 const SEED_FOODS=[
- ['חזה עוף (מבושל/גריל)','protein',165,31,3.6,0],['פרגית (ירך עוף ללא עור)','protein',190,26,9,0],
- ['הודו חזה','protein',150,29,3,0],['בקר טחון 10%','protein',215,26,12,0],['סטייק אנטריקוט','protein',270,25,18,0],
- ['סלמון','protein',205,22,13,0],['טונה בשמן (מסונן)','protein',190,26,9,0],['טונה במים','protein',115,26,1,0],
- ['דג לבן (אמנון/לברק)','protein',105,21,2,0],['אבקת חלבון (סקופ = 30 גרם)','protein',380,75,5,8],['טופו','protein',120,12,7,2],
+ ['חזה עוף (מבושל/גריל)','meat',165,31,3.6,0],['פרגית (ירך עוף ללא עור)','meat',190,26,9,0],
+ ['הודו חזה','meat',150,29,3,0],['בקר טחון 10%','meat',215,26,12,0],['סטייק אנטריקוט','meat',270,25,18,0],
+ ['סלמון','fish',205,22,13,0],['טונה בשמן (מסונן)','fish',190,26,9,0],['טונה במים','fish',115,26,1,0],
+ ['דג לבן (אמנון/לברק)','fish',105,21,2,0],['אבקת חלבון (סקופ = 30 גרם)','other',380,75,5,8],['טופו','legume',120,12,7,2],
  ['ביצה (יחידה = 55 גרם)','dairy',140,12.5,10,1],['קוטג 5%','dairy',100,11,5,3],['יוגורט יווני 5%','dairy',95,8,5,4],
  ['יוגורט 0%','dairy',55,5.5,0,6],['גבינה בולגרית 5%','dairy',110,15,5,2],['גבינה צהובה 28%','dairy',360,25,28,1],
  ['לאבנה 5%','dairy',95,7,5,4],['חלב 3%','dairy',60,3.3,3,4.7],['גבינה לבנה 5%','dairy',95,9,5,3.5],
- ['לחם מלא (פרוסה = 35 גרם)','carb',245,9,3,45],['אורז מבושל','carb',130,2.7,0.3,28],['קינואה מבושלת','carb',120,4.4,1.9,21],
- ['בטטה אפויה','carb',90,2,0.1,21],['תפוח אדמה מבושל','carb',85,2,0.1,20],['פסטה מלאה מבושלת','carb',125,5,1,25],
- ['שיבולת שועל (יבשה)','carb',380,13,7,66],['עדשים מבושלות','carb',115,9,0.4,20],['שעועית מבושלת','carb',125,9,0.5,22],
- ['חומוס מוכן','carb',240,8,17,15],['פיתה (יחידה = 60 גרם)','carb',275,9,1,55],['גרנולה','carb',450,10,17,62],
- ['שמן זית (כף = 14 גרם)','fat',884,0,100,0],['טחינה גולמית','fat',600,17,54,13],['אבוקדו','fat',160,2,15,9],
- ['שקדים','fat',580,21,50,20],['אגוזי מלך','fat',650,15,65,14],['חמאת בוטנים','fat',590,25,50,20],['זרעי ציה','fat',490,17,31,42],
- ['חמאה','fat',720,0.5,81,0],['זיתים','fat',145,1,15,4],
- ['סלט ירקות (עגבנייה, מלפפון)','veg',20,1,0.2,4],['ברוקולי','veg',35,2.8,0.4,7],['בננה','veg',90,1,0.3,23],
- ['תפוח','veg',52,0.3,0.2,14],['ענבים','veg',70,0.7,0.2,18],['גזר','veg',40,1,0.2,10],['אבטיח','veg',30,0.6,0.2,8],
- ['שקשוקה (2 ביצים ברוטב)','other',150,9,10,6],['שוקולד מריר 70%','other',600,8,43,45],['בירה (100 מל)','other',43,0.5,0,3.6],['יין (100 מל)','other',83,0.1,0,2.6]
+ ['לחם מלא (פרוסה = 35 גרם)','grain',245,9,3,45],['אורז מבושל','grain',130,2.7,0.3,28],['קינואה מבושלת','grain',120,4.4,1.9,21],
+ ['בטטה אפויה','grain',90,2,0.1,21],['תפוח אדמה מבושל','grain',85,2,0.1,20],['פסטה מלאה מבושלת','grain',125,5,1,25],
+ ['שיבולת שועל (יבשה)','grain',380,13,7,66],['עדשים מבושלות','legume',115,9,0.4,20],['שעועית מבושלת','legume',125,9,0.5,22],
+ ['חומוס (ממרח מוכן)','legume',240,8,17,15],['פיתה (יחידה = 60 גרם)','grain',275,9,1,55],['גרנולה','grain',450,10,17,62],
+ ['שמן זית (כף = 14 גרם)','nuts',884,0,100,0],['טחינה גולמית','nuts',600,17,54,13],['אבוקדו','nuts',160,2,15,9],
+ ['שקדים','nuts',580,21,50,20],['אגוזי מלך','nuts',650,15,65,14],['חמאת בוטנים','nuts',590,25,50,20],['זרעי ציה','nuts',490,17,31,42],
+ ['חמאה','nuts',720,0.5,81,0],['זיתים','nuts',145,1,15,4],
+ ['סלט ירקות (עגבנייה, מלפפון)','veg',20,1,0.2,4],['ברוקולי','veg',35,2.8,0.4,7],['בננה','fruit',90,1,0.3,23],
+ ['תפוח','fruit',52,0.3,0.2,14],['ענבים','fruit',70,0.7,0.2,18],['גזר','veg',40,1,0.2,10],['אבטיח','fruit',30,0.6,0.2,8],
+ ['שקשוקה (2 ביצים ברוטב)','dairy',150,9,10,6],['שוקולד מריר 70%','other',600,8,43,45],['בירה (100 מל)','other',43,0.5,0,3.6],['יין (100 מל)','other',83,0.1,0,2.6],
+ /* --- נוסף בגרסה 1.0.5 --- */
+ // פירות
+ ['תפוז','fruit',47,0.9,0.1,12],['קלמנטינה','fruit',53,0.8,0.3,13],['אשכולית','fruit',42,0.8,0.1,11],['אגס','fruit',57,0.4,0.1,15],
+ ['אפרסק','fruit',39,0.9,0.3,10],['נקטרינה','fruit',44,1.1,0.3,11],['שזיף','fruit',46,0.7,0.3,11],['משמש','fruit',48,1.4,0.4,11],
+ ['מלון','fruit',34,0.8,0.2,8],['אננס','fruit',50,0.5,0.1,13],['מנגו','fruit',60,0.8,0.4,15],['קיווי','fruit',61,1.1,0.5,15],
+ ['תותים','fruit',32,0.7,0.3,8],['אוכמניות','fruit',57,0.7,0.3,14],['פטל','fruit',52,1.2,0.7,12],['דובדבנים','fruit',63,1.1,0.2,16],
+ ['רימון','fruit',83,1.7,1.2,19],['תאנה','fruit',74,0.8,0.3,19],['אפרסמון','fruit',70,0.6,0.2,19],['גויאבה','fruit',68,2.6,1,14],
+ ['ליצי','fruit',66,0.8,0.4,17],['פפאיה','fruit',43,0.5,0.3,11],['תמר מגהול (יחידה = 24 גרם)','fruit',277,1.8,0.2,75],['צימוקים','fruit',299,3.1,0.5,79],
+ ['משמש מיובש','fruit',241,3.4,0.5,63],['שזיף מיובש','fruit',240,2.2,0.4,64],
+ // ירקות
+ ['מלפפון','veg',15,0.7,0.1,3.6],['עגבנייה','veg',18,0.9,0.2,3.9],['עגבניות שרי','veg',18,0.9,0.2,3.9],['פלפל אדום','veg',31,1,0.3,6],
+ ['חסה','veg',15,1.4,0.2,2.9],['כרוב','veg',25,1.3,0.1,6],['כרובית','veg',25,1.9,0.3,5],['קישוא','veg',17,1.2,0.3,3.1],
+ ['חציל','veg',25,1,0.2,6],['בצל','veg',40,1.1,0.1,9],['פטריות','veg',22,3.1,0.3,3.3],['תרד','veg',23,2.9,0.4,3.6],
+ ['סלק מבושל','veg',44,1.7,0.2,10],['שעועית ירוקה','veg',31,1.8,0.2,7],['תירס מבושל','veg',96,3.4,1.5,21],['אפונה ירוקה','veg',81,5.4,0.4,14],
+ ['דלעת','veg',26,1,0.1,6.5],['סלרי','veg',16,0.7,0.2,3],['צנונית','veg',16,0.7,0.1,3.4],['כרוב ניצנים','veg',43,3.4,0.3,9],
+ // בשר ועוף
+ ['שניצל עוף (מטוגן)','meat',250,18,13,14],['כבד עוף','meat',165,24,6.5,1],['פסטרמה הודו','meat',110,20,2,3],['נקניקיות','meat',250,12,21,2],
+ ['כרעיים עוף (עם עור)','meat',230,24,15,0],['קבב בקר','meat',260,17,20,4],['שווארמה הודו','meat',215,26,12,1],
+ // דגים ופירות ים
+ ['סרדינים בשמן','fish',208,25,11,0],['שרימפס','fish',99,24,0.3,0.2],['מקרל','fish',205,19,14,0],['פילה בקלה','fish',82,18,0.7,0],['דניס','fish',120,20,4.5,0],
+ // חלב וביצים
+ ['חלבון ביצה (יחידה = 33 גרם)','dairy',52,11,0.2,0.7],['מוצרלה','dairy',280,28,17,3],['יוגורט חלבון 0%','dairy',60,10,0.2,4.5],['פרמזן','dairy',430,38,29,4],['גבינת שמנת 9%','dairy',150,8,9,4],['חלב סויה','dairy',40,3.3,1.8,2.5],
+ // קטניות
+ ['גרגרי חומוס מבושלים','legume',164,8.9,2.6,27],['אדממה','legume',121,12,5,9],['פול מבושל','legume',110,7.6,0.4,20],['טמפה','legume',192,20,11,8],['פלאפל (כדור = 17 גרם)','legume',333,13,18,32],
+ // לחם ודגנים
+ ['לחם לבן (פרוסה = 30 גרם)','grain',265,9,3.2,49],['בורגול מבושל','grain',83,3,0.2,19],['קוסקוס מבושל','grain',112,3.8,0.2,23],['פתיתים מבושלים','grain',150,5,1,30],
+ ['פריכיות אורז (יחידה = 9 גרם)','grain',387,8,3,81],['פסטה לבנה מבושלת','grain',158,5.8,0.9,31],['טורטייה (יחידה = 60 גרם)','grain',310,8,8,50],
+ // אגוזים וזרעים
+ ['קשיו','nuts',553,18,44,30],['פיסטוקים','nuts',560,20,45,28],['גרעיני דלעת','nuts',559,30,49,11],['גרעיני חמנייה','nuts',584,21,51,20],['חמאת שקדים','nuts',614,21,56,19],['זרעי פשתן','nuts',534,18,42,29],
+ // מתוקים, משקאות ותוספים
+ ['חטיף חלבון (יחידה = 60 גרם)','other',360,33,12,35],['דבש','other',304,0.3,0,82],['מיץ תפוזים (100 מל)','other',45,0.7,0.2,10],['קולה (100 מל)','other',42,0,0,10.6],
+ ['קפה הפוך (100 מל)','other',40,2,2,3],['פיצה (משולש = 110 גרם)','other',266,11,10,33],['גלידה','other',207,3.5,11,24],['במבה','other',540,15,34,40]
 ].map((a,i)=>({id:'s'+i,name:a[0],cat:a[1],per:100,kcal:a[2],p:a[3],f:a[4],c:a[5]}));
 
 /* ---------- ארסנל תרגילים ---------- */
@@ -671,25 +721,40 @@ function renderFood(){
   else h+=`<div class="list">${db.foods.map(f=>`<div class="item"><div class="dot">✏️</div><div class="mid" onclick="openCustomFood('${f.id}')"><div class="t">${esc(f.name)}</div><div class="s">ל-${f.per===1?'מנה':'100 ג\''}: ${f.kcal} קק"ל · ח ${f.p} · ש ${f.f} · פ ${f.c}</div></div></div>`).join('')}</div>`;
   document.getElementById('v-food').innerHTML=h;
 }
-function catDot(x){const f=allFoods().find(a=>a.id===x.foodId);const c=f?f.cat:'other';return {protein:'pro',dairy:'fat',carb:'carb',fat:'fat',veg:'acc'}[c]||'';}
-function catEmoji(x){const f=allFoods().find(a=>a.id===x.foodId);const c=f?f.cat:'other';return {protein:'🥩',dairy:'🥚',carb:'🍞',fat:'🥑',veg:'🥗',other:'🍴'}[c]||'🍴';}
-let fCat='all',pickFood=null,editLogId=null;
+function catDot(x){const f=allFoods().find(a=>a.id===x.foodId);return catOf(f&&f.cat).dot;}
+function catEmoji(x){const f=allFoods().find(a=>a.id===x.foodId);return f&&f.custom&&(!f.cat||f.cat==='other')?'✏️':catOf(f&&f.cat).emo;}
+let fCat=null,pickFood=null,editLogId=null; /* fCat: null = מסך הקטגוריות */
 function openFoodAdd(){
   const hr=now().getHours();const meal=hr<14?'m1':hr<18?'m2':'m3';
-  segBuild('f-meal',MEALS,meal);fCat='all';document.getElementById('f-search').value='';renderFoodPick();openSheet('sheet-food');
-  setTimeout(()=>document.getElementById('f-search').focus(),300);
+  segBuild('f-meal',MEALS,meal);fCat=null;document.getElementById('f-search').value='';renderFoodPick();openSheet('sheet-food');
 }
+function foodRow(f){return `<div class="item" onclick="pickFoodItem('${f.id}')"><div class="dot ${catDot({foodId:f.id})}">${catEmoji({foodId:f.id})}</div><div class="mid"><div class="t">${esc(f.name)}</div><div class="s">ל-${f.per===1?'מנה':'100 ג\''}: ${f.kcal} קק"ל · חלבון ${f.p} · שומן ${f.f} · פחמ' ${f.c}</div></div></div>`;}
 function renderFoodPick(){
   const q=document.getElementById('f-search').value.trim();
-  const cats=[['all','הכל'],['recent','אחרונים'],['mine','שלי']].concat(Object.entries(FOOD_CATS));
-  document.getElementById('f-chips').innerHTML=cats.map(([k,l])=>`<button class="chip ${fCat===k?'on':''}" onclick="fCat='${k}';renderFoodPick()">${l}</button>`).join('');
-  let list=allFoods();
-  if(fCat==='recent'){list=db.recentFoods.map(id=>list.find(f=>f.id===id)).filter(Boolean);}
-  else if(fCat==='mine')list=db.foods;
-  else if(fCat!=='all')list=list.filter(f=>f.cat===fCat);
-  if(q)list=list.filter(f=>f.name.includes(q));
-  if(!q&&fCat==='all'){const rec=db.recentFoods.map(id=>allFoods().find(f=>f.id===id)).filter(Boolean);list=rec.concat(list.filter(f=>!db.recentFoods.includes(f.id)));}
-  document.getElementById('f-pick').innerHTML=list.length?list.slice(0,80).map(f=>`<div class="item" onclick="pickFoodItem('${f.id}')"><div class="dot ${catDot({foodId:f.id})}">${catEmoji({foodId:f.id})}</div><div class="mid"><div class="t">${esc(f.name)}</div><div class="s">ל-${f.per===1?'מנה':'100 ג\''}: ${f.kcal} קק"ל · חלבון ${f.p} · שומן ${f.f} · פחמ' ${f.c}</div></div></div>`).join(''):`<div class="empty"><p>לא נמצא. אפשר להוסיף כמאכל חדש.</p></div>`;
+  const head=document.getElementById('f-chips'),box=document.getElementById('f-pick');
+  const all=allFoods();
+  if(q){ // חיפוש בכל המאגר
+    const list=all.filter(f=>f.name.includes(q));
+    head.innerHTML=`<span class="small muted">${list.length} תוצאות</span>`;
+    box.className='picklist list';
+    box.innerHTML=list.length?list.slice(0,40).map(foodRow).join(''):`<div class="empty"><p>לא נמצא. אפשר להוסיף כמאכל חדש.</p></div>`;
+    return;
+  }
+  if(fCat){ // קטגוריה אחת
+    const list=fCat==='recent'?db.recentFoods.map(id=>all.find(f=>f.id===id)).filter(Boolean):fCat==='mine'?db.foods.slice().sort((x,y)=>x.name.localeCompare(y.name,'he')):all.filter(f=>f.cat===fCat).sort((x,y)=>x.name.localeCompare(y.name,'he'));
+    const title=fCat==='recent'?'🕘 אחרונים':fCat==='mine'?'✏️ המאכלים שלי':catOf(fCat).emo+' '+catOf(fCat).l;
+    head.innerHTML=`<button class="chip" onclick="fCat=null;renderFoodPick()">→ כל הקטגוריות</button><b style="align-self:center;font-size:14px">${title}</b>`;
+    box.className='picklist list';
+    box.innerHTML=list.length?list.map(foodRow).join(''):`<div class="empty"><p>אין עדיין מאכלים כאן.</p></div>`;
+    return;
+  }
+  // מסך הבית: אחרונים (עד 5) + רשת קטגוריות
+  const rec=db.recentFoods.map(id=>all.find(f=>f.id===id)).filter(Boolean).slice(0,5);
+  head.innerHTML='';box.className='';
+  const tiles=Object.entries(FOOD_CATS).map(([k,c])=>[k,c.emo,c.l,all.filter(f=>f.cat===k).length]);
+  if(db.foods.length)tiles.push(['mine','✏️','המאכלים שלי',db.foods.length]);
+  box.innerHTML=(rec.length?`<div class="small muted" style="font-weight:700;margin:0 4px 6px">🕘 אחרונים</div><div class="list">${rec.map(foodRow).join('')}</div>`:'')+
+    `<div class="fcats">${tiles.map(([k,e,l,n])=>`<button onclick="fCat='${k}';renderFoodPick()"><span class="e">${e}</span><span class="l">${l}</span><span class="n">${n}</span></button>`).join('')}</div>`;
 }
 function pickFoodItem(id){
   pickFood=allFoods().find(f=>f.id===id);editLogId=null;
@@ -726,6 +791,8 @@ function openCustomFood(id){
   document.getElementById('cf-title').textContent=f?'עריכת מאכל':'מאכל חדש';
   document.getElementById('cf-name').value=f?f.name:(document.getElementById('f-search')?.value||'');
   ['kcal','p','f','c'].forEach(k=>document.getElementById('cf-'+k).value=f?f[k]:'');
+  const dc=f?f.cat:(fCat&&FOOD_CATS[fCat]?fCat:'other');
+  document.getElementById('cf-cat').innerHTML=Object.entries(FOOD_CATS).map(([k,c])=>`<option value="${k}" ${k===dc?'selected':''}>${c.emo} ${c.l}</option>`).join('');
   [...document.getElementById('cf-per').children].forEach(b=>b.classList.toggle('on',b.dataset.v===String(f?f.per:100)));
   document.getElementById('cf-delete').style.display=f?'block':'none';
   closeSheet();openSheet('sheet-cfood');
@@ -733,7 +800,7 @@ function openCustomFood(id){
 function saveCustomFood(){
   const name=document.getElementById('cf-name').value.trim();if(!name)return toast('הזן שם');
   const v=k=>parseFloat(document.getElementById('cf-'+k).value)||0;
-  const f={id:editFoodId||'c_'+uid(),name,cat:'other',per:+segVal('cf-per')||100,kcal:v('kcal'),p:v('p'),f:v('f'),c:v('c'),custom:true};
+  const f={id:editFoodId||'c_'+uid(),name,cat:document.getElementById('cf-cat').value||'other',per:+segVal('cf-per')||100,kcal:v('kcal'),p:v('p'),f:v('f'),c:v('c'),custom:true};
   if(editFoodId){const i=db.foods.findIndex(x=>x.id===editFoodId);db.foods[i]=f;}else db.foods.push(f);
   save();closeSheet();render();
   if(!editFoodId&&cur==='food'){pickFoodItem(f.id);}

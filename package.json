@@ -1,6 +1,6 @@
 {
   "name": "my-health",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "private": true,
   "description": "הבריאות שלי — מעקב משקל, תזונה, אימונים ושינה (קובץ HTML יחיד)"
 }
