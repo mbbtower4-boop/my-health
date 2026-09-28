@@ -50,7 +50,7 @@
 
   /* day navigator */
   .dnav{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:14px;padding:8px 10px;box-shadow:var(--shadow);margin:4px 0 12px}
-  .dnav button{width:38px;height:38px;flex:0 0 38px;border:none;background:var(--line-soft);border-radius:11px;font-size:20px;color:var(--ink);cursor:pointer;font-family:inherit}
+  .dnav button{width:38px;height:38px;flex:0 0 38px;border:none;background:var(--line-soft);border-radius:11px;font-size:20px;color:var(--ink);cursor:pointer;font-family:inherit;display:grid;place-items:center}
   .dnav button:disabled{opacity:.35}
   .dnav .mid{flex:1;text-align:center;cursor:pointer}
   .dnav .mid b{display:block;font-size:15px;font-weight:800}
@@ -414,7 +414,7 @@
 </div>
 
 <script>
-const APP_VERSION='1.0.3';
+const APP_VERSION='1.0.4';
 /* ---------- אחסון ---------- */
 const KEY='my-health-v1';
 let db={};
@@ -553,13 +553,16 @@ let cur='today';
 function renderNav(){document.getElementById('nav').innerHTML=NAV.map(([k,ic,lb])=>`<button data-v="${k}" class="${k===cur?'on':''}" onclick="go('${k}')"><span class="ic">${ic}</span><span class="lb">${lb}</span></button>`).join('');}
 function go(v){cur=v;document.querySelectorAll('.view').forEach(s=>s.classList.remove('on'));document.getElementById('v-'+v).classList.add('on');document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));render();window.scrollTo(0,0);}
 function render(){({today:renderToday,food:renderFood,train:renderTrain,stats:renderStats,settings:renderSettings})[cur]();}
+/* חצים כ-SVG (לא תווי ‹ › שהדפדפן עלול להפוך ב-RTL) */
+const CHEV_R='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>';
+const CHEV_L='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
 function dayNav(){
-  /* RTL: הכפתור הראשון מוצג בימין. חץ ימינה (›) = יום הבא, חץ שמאלה (‹) = יום קודם */
+  /* RTL: הכפתור הראשון מוצג בימין. ימין = יום קודם (חץ ימינה), שמאל = יום הבא (חץ שמאלה) */
   const isToday=selDay===todayKey();
-  return `<div class="dnav"><button onclick="setSel('${shiftDay(selDay,1)}')" ${isToday?'disabled':''} title="יום הבא">›</button>
+  return `<div class="dnav"><button onclick="setSel('${shiftDay(selDay,-1)}')" title="יום קודם" aria-label="יום קודם">${CHEV_R}</button>
     <div class="mid" onclick="setSel('${todayKey()}')"><b>${isToday?'היום':dayLabel(selDay)}</b><small>${isToday?dayLabel(selDay):''}</small></div>
     ${isToday?'':`<button class="today" onclick="setSel('${todayKey()}')">היום</button>`}
-    <button onclick="setSel('${shiftDay(selDay,-1)}')" title="יום קודם">‹</button></div>`;
+    <button onclick="setSel('${shiftDay(selDay,1)}')" ${isToday?'disabled':''} title="יום הבא" aria-label="יום הבא">${CHEV_L}</button></div>`;
 }
 function setSel(k){selDay=k;render();}
 
